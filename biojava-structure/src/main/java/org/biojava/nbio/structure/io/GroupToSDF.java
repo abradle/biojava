@@ -30,9 +30,9 @@ import org.biojava.nbio.structure.Group;
 
 public class GroupToSDF {
 
-
+	
 	public String getText(Group thisGroup) {
-		// Fuction to convert a Group to a strign of  the MDL molnlock
+		// Function to convert a Group to a string of  the MDL molnlock
 		StringBuilder sb = new StringBuilder();
 		sb.append(getHeader(thisGroup));
 		sb.append(getCtab(thisGroup));
