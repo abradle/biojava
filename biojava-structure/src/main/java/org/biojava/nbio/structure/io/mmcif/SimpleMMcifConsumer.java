@@ -455,6 +455,7 @@ public class SimpleMMcifConsumer implements MMcifConsumer {
 		else{
 			// check if residue number is the same ...
 			// insertion code is part of residue number
+			// 
 			if ( ! residueNumber.equals(current_group.getResidueNumber())) {
 				//System.out.println("end of residue: "+current_group.getPDBCode()+" "+residueNrInt);
 				current_chain.addGroup(current_group);
@@ -936,7 +937,7 @@ public class SimpleMMcifConsumer implements MMcifConsumer {
 					for (Group altLocGroup : group.getAltLocs()) { 
 						for ( Atom groupAtom : group.getAtoms()) {
 							// If this alt loc doesn't have this atom
-							if (! altLocGroup.hasAtom(groupAtom.getName())) {
+							if (! altLocGroup.hasAtom(groupAtom.getName()) && altLocGroup.getPDBName().equals(group.getPDBName())) {
 								altLocGroup.addAtom(groupAtom);
 							}
 						}

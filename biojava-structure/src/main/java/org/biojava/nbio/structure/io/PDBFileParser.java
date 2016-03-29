@@ -2775,8 +2775,8 @@ public class PDBFileParser  {
 				for (Group group : chain.getAtomGroups()) {
 					for (Group altLocGroup : group.getAltLocs()) { 
 						for ( Atom groupAtom : group.getAtoms()) {
-							// If this alt loc doesn't have this atom
-							if (! altLocGroup.hasAtom(groupAtom.getName())) {
+							// If this alt loc doesn't have this atom and it's not hetrogenity
+							if (! altLocGroup.hasAtom(groupAtom.getName()) && altLocGroup.getPDBName().equals(group.getPDBName())) {
 								altLocGroup.addAtom(groupAtom);
 							}
 						}
