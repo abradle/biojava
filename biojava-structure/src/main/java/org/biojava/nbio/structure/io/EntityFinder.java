@@ -49,20 +49,20 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 /**
- * Heuristical finding of Compounds (called Entities in mmCIF dictionary)
- * in a given Structure. Compounds are the groups of sequence identical NCS-related polymer chains
+ * Heuristical finding of Entities (called Compounds in legacy PDB format)
+ * in a given Structure. Entities are the groups of sequence identical NCS-related polymer chains
  * in the Structure.
  *
- * This is related to {@link SeqRes2AtomAligner} but it is intended for raw PDB files where
+ * This is related to {@link SeqRes2AtomAligner} but it is intended for raw PDB/mmCIF files where
  * possibly no SEQRES is given.
  *
- * @author duarte_j
+ * @author Jose Duarte
  */
-public class CompoundFinder {
+public class EntityFinder {
 
 	private Structure s;
 
-	private static final Logger logger = LoggerFactory.getLogger(CompoundFinder.class);
+	private static final Logger logger = LoggerFactory.getLogger(EntityFinder.class);
 
 	/**
 	 * Above this ratio of mismatching residue types for same residue numbers we
@@ -82,20 +82,20 @@ public class CompoundFinder {
 	public static final double GAP_COVERAGE_THRESHOLD = 0.3;
 
 
-	public CompoundFinder(Structure s) {
+	public EntityFinder(Structure s) {
 		this.s = s;
 	}
 
 	/**
-	 * Utility method that employs some heuristics to find the Compounds
+	 * Utility method that employs some heuristics to find the {@link EntityInfo}s
 	 * for this Structure in case the information is missing in PDB/mmCIF file
 	 * @return
 	 */
-	public List<Compound> findCompounds() {
+	public List<EntityInfo> findEntities() {
 
-		TreeMap<String,Compound> chainIds2entities = findCompoundsFromAlignment();
+		TreeMap<String,EntityInfo> chainIds2entities = findCompoundsFromAlignment();
 
-		List<Compound> compounds = findUniqueCompounds(chainIds2entities);
+		List<EntityInfo> compounds = findUniqueCompounds(chainIds2entities);
 
 		createPurelyNonPolyCompounds(compounds);
 
@@ -106,13 +106,13 @@ public class CompoundFinder {
 	 * Utility method to obtain a list of unique entities from the chainIds2entities map
 	 * @return
 	 */
-	private static List<Compound> findUniqueCompounds(TreeMap<String,Compound> chainIds2entities) {
+	private static List<EntityInfo> findUniqueCompounds(TreeMap<String,EntityInfo> chainIds2entities) {
 
-		List<Compound> list = new ArrayList<Compound>();
+		List<EntityInfo> list = new ArrayList<EntityInfo>();
 
-		for (Compound cluster:chainIds2entities.values()) {
+		for (EntityInfo cluster:chainIds2entities.values()) {
 			boolean present = false;
-			for (Compound cl:list) {
+			for (EntityInfo cl:list) {
 				if (cl==cluster) {
 					present = true;
 					break;
@@ -123,7 +123,7 @@ public class CompoundFinder {
 		return list;
 	}
 
-	private void createPurelyNonPolyCompounds(List<Compound> compounds) {
+	private void createPurelyNonPolyCompounds(List<EntityInfo> compounds) {
 
 		List<Chain> pureNonPolymerChains = new ArrayList<Chain>();
 		for (int i=0;i<s.getChains().size();i++) {
@@ -136,9 +136,9 @@ public class CompoundFinder {
 
 			int maxMolId = 0; // if we have no compounds at all we just use 0, so that first assignment is 1
 			if (!compounds.isEmpty()) {
-				Collections.max(compounds, new Comparator<Compound>() {
+				Collections.max(compounds, new Comparator<EntityInfo>() {
 					@Override
-					public int compare(Compound o1, Compound o2) {
+					public int compare(EntityInfo o1, EntityInfo o2) {
 						return new Integer(o1.getMolId()).compareTo(o2.getMolId());
 					}
 				}).getMolId();
@@ -147,9 +147,14 @@ public class CompoundFinder {
 			int molId = maxMolId + 1;
 			// for the purely non-polymeric chains we assign additional compounds
 			for (Chain c: pureNonPolymerChains) {
-				Compound comp = new Compound();
+				EntityInfo comp = new EntityInfo();
 				comp.addChain(c);
 				comp.setMolId(molId);
+				if (StructureTools.isChainWaterOnly(c)) {
+					comp.setType(EntityType.WATER);
+				} else {
+					comp.setType(EntityType.NONPOLYMER);
+				}
 				logger.warn("Chain {} is purely non-polymeric, will assign a new Compound (entity) to it (entity id {})", c.getChainID(), molId);
 				molId++;
 
@@ -204,7 +209,7 @@ public class CompoundFinder {
 
 
 
-	private TreeMap<String,Compound> findCompoundsFromAlignment() {
+	private TreeMap<String,EntityInfo> findCompoundsFromAlignment() {
 
 		// first we determine which chains to consider: anything not looking
 		// polymeric (protein or nucleotide chain) should be discarded
@@ -219,7 +224,7 @@ public class CompoundFinder {
 		}
 
 
-		TreeMap<String, Compound> chainIds2compounds = new TreeMap<String,Compound>();
+		TreeMap<String, EntityInfo> chainIds2compounds = new TreeMap<String,EntityInfo>();
 
 		int molId = 1;
 
@@ -291,16 +296,17 @@ public class CompoundFinder {
 								!chainIds2compounds.containsKey(c2.getChainID())) {
 							logger.debug("Creating Compound with chains {},{}",c1.getChainID(),c2.getChainID());
 
-							Compound ent = new Compound();
+							EntityInfo ent = new EntityInfo();
 							ent.addChain(c1);
 							ent.addChain(c2);
 							ent.setMolId(molId++);
+							ent.setType(EntityType.POLYMER);
 							chainIds2compounds.put(c1.getChainID(), ent);
 							chainIds2compounds.put(c2.getChainID(), ent);
 
 
 						} else {
-							Compound ent = chainIds2compounds.get(c1.getChainID());
+							EntityInfo ent = chainIds2compounds.get(c1.getChainID());
 
 							if (ent==null) {
 								logger.debug("Adding chain {} to entity {}",c1.getChainID(),c2.getChainID());
@@ -338,7 +344,7 @@ public class CompoundFinder {
 			if (!chainIds2compounds.containsKey(c.getChainID())) {
 				logger.debug("Creating a 1-member Compound for chain {}",c.getChainID());
 
-				Compound ent = new Compound();
+				EntityInfo ent = new EntityInfo();
 				ent.addChain(c);
 				ent.setMolId(molId++);
 

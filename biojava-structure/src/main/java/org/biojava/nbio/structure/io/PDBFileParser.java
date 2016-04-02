@@ -54,7 +54,8 @@ import org.biojava.nbio.structure.AtomImpl;
 import org.biojava.nbio.structure.Author;
 import org.biojava.nbio.structure.Chain;
 import org.biojava.nbio.structure.ChainImpl;
-import org.biojava.nbio.structure.Compound;
+import org.biojava.nbio.structure.EntityInfo;
+import org.biojava.nbio.structure.EntityType;
 import org.biojava.nbio.structure.DBRef;
 import org.biojava.nbio.structure.Element;
 import org.biojava.nbio.structure.Group;
@@ -179,8 +180,8 @@ public class PDBFileParser  {
 
 	private boolean isLastCompndLine = false;
 	private boolean isLastSourceLine = false;
-	private Compound current_compound;
-	private List<Compound> compounds = new ArrayList<Compound>();
+	private EntityInfo current_compound;
+	private List<EntityInfo> compounds = new ArrayList<EntityInfo>();
 	private HashMap<Integer,List<String>> compoundMolIds2chainIds = new HashMap<Integer, List<String>>();
 	private List<String> compndLines = new ArrayList<String>();
 	private List<String> sourceLines = new ArrayList<String>();
@@ -1012,9 +1013,12 @@ public class PDBFileParser  {
 
 				logger.debug("Initialising new Compound with mol_id {}", i);
 
-				current_compound = new Compound();
+				current_compound = new EntityInfo();
 
 				current_compound.setMolId(i);
+				
+				// we will set polymer for all defined compounds in PDB file (non-polymer compounds are not defined in header) - JD 2016-03-25
+				current_compound.setType(EntityType.POLYMER);
 
 				prevMolId = i;
 			}
@@ -1027,7 +1031,7 @@ public class PDBFileParser  {
 		}
 
 		if (field.equals("MOLECULE:")) {
-			current_compound.setMolName(value);
+			current_compound.setDescription(value);
 
 		}
 		if (field.equals("CHAIN:")) {
@@ -2758,11 +2762,17 @@ public class PDBFileParser  {
 		if ( params.isParseSecStruc() && !params.isHeaderOnly())
 			setSecStruc();
 
+		// Now correct the alternate location group
+		StructureTools.cleanUpAltLocs(structure);
 
 		return structure;
 
 			}
 
+
+	/**
+	 * Add the charges to the Structure
+	 */
 	private void addCharges() {
 		ChargeAdder adder = new ChargeAdder(structure);
 		adder.addCharges();
@@ -2789,7 +2799,7 @@ public class PDBFileParser  {
 		//		System.out.println("[makeCompounds] adding sources to compounds from sourceLines");
 		// since we're starting again from the first compound, reset it here
 		if ( compounds.size() == 0){
-			current_compound = new Compound();
+			current_compound = new EntityInfo();
 		} else {
 			current_compound = compounds.get(0);
 		}
@@ -2881,8 +2891,7 @@ public class PDBFileParser  {
 
 
 		linkChains2Compound(structure);
-		structure.setCompounds(compounds);
-
+		structure.setEntityInfos(compounds);
 		//associate the temporary Groups in the siteMap to the ones
 
 		if (!params.isHeaderOnly()) {
@@ -2919,7 +2928,7 @@ public class PDBFileParser  {
 
 		// to make sure we have Compounds linked to chains, we call getCompounds() which will lazily initialise the
 		// compounds using heuristics (see CompoundFinder) in the case that they were not explicitly present in the file
-		structure.getCompounds();
+		structure.getEntityInfos();
 	}
 
 	private void setSecStruc(){
@@ -3002,7 +3011,8 @@ public class PDBFileParser  {
 	}
 
 
-	/** After the parsing of a PDB file the {@link Chain} and  {@link Compound}
+	/** 
+	 * After the parsing of a PDB file the {@link Chain} and  {@link EntityInfo}
 	 * objects need to be linked to each other.
 	 *
 	 * @param s the structure
@@ -3010,7 +3020,7 @@ public class PDBFileParser  {
 	public void linkChains2Compound(Structure s){
 
 
-		for(Compound comp : compounds){
+		for(EntityInfo comp : compounds){
 			List<Chain> chains = new ArrayList<Chain>();
 			List<String> chainIds = compoundMolIds2chainIds.get(comp.getMolId());
 			if ( chainIds == null)
@@ -3036,7 +3046,7 @@ public class PDBFileParser  {
 		}
 
 		if ( compounds.size() == 1) {
-			Compound comp = compounds.get(0);
+			EntityInfo comp = compounds.get(0);
 			if ( compoundMolIds2chainIds.get(comp.getMolId()) == null){
 				List<Chain> chains = s.getChains(0);
 				if ( chains.size() == 1) {
@@ -3047,7 +3057,7 @@ public class PDBFileParser  {
 			}
 		}
 
-		for (Compound comp: compounds){
+		for (EntityInfo comp: compounds){
 			if ( compoundMolIds2chainIds.get(comp.getMolId()) == null) {
 				// could not link to chain
 				// TODO: should this be allowed to happen?
@@ -3058,7 +3068,7 @@ public class PDBFileParser  {
 					continue;
 				try {
 					Chain c = s.getChainByPDB(chainId);
-					c.setCompound(comp);
+					c.setEntityInfo(comp);
 				} catch (StructureException e){
 					logger.warn("Chain {} was not found, can't assign a compound (entity) to it.",chainId);
 				}
@@ -3071,27 +3081,33 @@ public class PDBFileParser  {
 
 		if (compounds!=null && !compounds.isEmpty()) {
 			for (Chain c: s.getChains()) {
-				if (c.getCompound() == null) {
+				if (c.getEntityInfo() == null) {
 
-					Compound compound = new Compound();
+					EntityInfo compound = new EntityInfo();
 					compound.addChain(c);
 					compound.setMolId(findMaxCompoundId(compounds)+1);
-					c.setCompound(compound);
+					c.setEntityInfo(compound);
 					compounds.add(compound);
+					
+					if (StructureTools.isChainWaterOnly(c)) {
+						compound.setType(EntityType.WATER);
+					} else {
+						compound.setType(EntityType.NONPOLYMER);
+					}
 
-					logger.warn("No compound (entity) found in file for chain {}. Creating new compound {} for it.", c.getChainID(), compound.getMolId());
+					logger.warn("No compound (entity) found in file for chain {}. Creating new entity {} for it.", c.getChainID(), compound.getMolId());
 				}
 			}
 		}
 	}
 
-	private static int findMaxCompoundId(List<Compound> compounds) {
+	private static int findMaxCompoundId(List<EntityInfo> compounds) {
 
 		return
 
-		Collections.max(compounds, new Comparator<Compound>() {
+		Collections.max(compounds, new Comparator<EntityInfo>() {
 			@Override
-			public int compare(Compound o1, Compound o2) {
+			public int compare(EntityInfo o1, EntityInfo o2) {
 				return new Integer(o1.getMolId()).compareTo(o2.getMolId());
 			}
 		}).getMolId();

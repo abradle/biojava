@@ -40,7 +40,7 @@ import java.util.Map;
  * <ul>
  * <li>{@link PDBHeader}</li>
  * <li>{@link DBRef}</li>
- * <li>{@link Compound}</li>
+ * <li>{@link EntityInfo}</li>
  * </ul>
  *
  * The structure object provides access to the data from the ATOM records through
@@ -514,24 +514,23 @@ public interface Structure extends Cloneable {
 	public String toMMCIF();
 
 	/**
-	 * Set the Compounds
+	 * Set the EntityInfo
 	 *
 	 * @param molList
 	 */
-	public void setCompounds(List<Compound> molList);
-
+	public void setEntityInfos(List<EntityInfo> molList);
+	
 	/**
-	 * Get all the Compounds for this Structure.
-	 * Compounds are called Entities in mmCIF dictionary.
+	 * Get all the EntityInfo for this Structure.
 	 *
-	 * @return a list of Compounds
+	 * @return a list of EntityInfos
 	 */
-	public List<Compound> getCompounds();
+	public List<EntityInfo> getEntityInfos();
 
 	/**
-	 * Add a Compound to this Structure
+	 * Add an EntityInfo to this Structure
 	 */
-	public void addCompound(Compound compound);
+	public void addEntityInfo(EntityInfo entityInfo);
 
 	/**
 	 * Set the list of database references for this structure
@@ -548,13 +547,21 @@ public interface Structure extends Cloneable {
 	public List<DBRef> getDBRefs();
 
 	/**
-	 * Request a particular compound by its molId (entity_id in mmCIF dictionary)
+	 * Request a particular entity by its entity id (mol id in legacy PDB format)
 	 *
-	 * @param molId
-	 * @return a compound
+	 * @param entityId
+	 * @return a entityInfo
+	 * @deprecated use {@link #getEntityById(int)} instead
 	 */
-	public Compound getCompoundById(int molId);
+	public EntityInfo getCompoundById(int entityId);
 
+	/**
+	 * Request a particular entity by its entity id (mol id in legacy PDB format)
+	 *
+	 * @param entityId
+	 * @return an entity 
+	 */	
+	public EntityInfo getEntityById(int entityId);
 
 	/**
 	 * Return the header information for this PDB file
