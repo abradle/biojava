@@ -180,6 +180,32 @@ public class MmtfUtils {
 	}
 
 	/**
+	 * Get the type of group (0,1 or 2) depending on whether it is an amino aicd (1), nucleic acid (2) or ligand (0)
+	 * @param currentGroup
+	 * @return The type of group. (0,1 or 2) depending on whether it is an amino aicd (1), nucleic acid (2) or ligand (0)
+	 */
+	public static int getGroupTypIndicator(String currentGroupType) {
+		// At the moment - peptide like is a HETATM group (consistent with biojava)
+		if(currentGroupType.toUpperCase().equals("PEPTIDE-LIKE")){
+			return 0;
+		}
+		// Again to correspond with Biojava - but I suspect we really want this to be 1
+		if(currentGroupType.toUpperCase().equals("D-PEPTIDE LINKING")){
+			return 0;
+		}
+		if(currentGroupType.toUpperCase().contains("PEPTIDE")){
+			return 1;
+		}
+		if(currentGroupType.toUpperCase().contains("DNA") || currentGroupType.toUpperCase().contains("RNA")){
+			return 2;
+		}
+		else{
+			return 0;
+		}
+	}
+
+
+	/**
 	 * Converts the set of experimental techniques to an array of strings.
 	 * @param experimentalTechniques the input set of experimental techniques
 	 * @return the array of strings describing the methods used.
@@ -271,7 +297,7 @@ public class MmtfUtils {
 		}
 		return count;
 	}
-	
+
 
 	/**
 	 * Function to get a list of atoms for a group. Only add each atom once.
@@ -344,16 +370,16 @@ public class MmtfUtils {
 	 * @param the integer index of the group type.
 	 */
 	public static void setSecStructType(Group group, int dsspIndex) {
-		 SecStrucType secStrucType = getSecStructTypeFromDsspIndex(dsspIndex);
-		 SecStrucState secStrucState = new SecStrucState(group, "MMTF_ASSIGNED", secStrucType);
-		 if(secStrucType!=null){
-		 group.setProperty("secstruc", secStrucState);
-		 }
-		 else{
-		 }
+		SecStrucType secStrucType = getSecStructTypeFromDsspIndex(dsspIndex);
+		SecStrucState secStrucState = new SecStrucState(group, "MMTF_ASSIGNED", secStrucType);
+		if(secStrucType!=null){
+			group.setProperty("secstruc", secStrucState);
+		}
+		else{
+		}
 	}
 
-	
+
 	/**
 	 * Helper function to set the DSSP type based on a numerical index.
 	 * @param dsspIndex the integer index of the type to set

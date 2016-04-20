@@ -153,7 +153,7 @@ public class MmtfStructureReader implements StructureAdapterInterface, Serializa
 			char insertionCode, String chemCompType, int atomCount, int bondCount, 
 			char singleLetterCode, int sequenceIndexId, int secStructType) {
 		// Get the polymer type
-		int polymerType = getGroupTypIndicator(chemCompType);
+		int polymerType = MmtfUtils.getGroupTypIndicator(chemCompType);
 		switch (polymerType) {
 		case 1:
 			AminoAcid aa = new AminoAcidImpl();
@@ -172,7 +172,6 @@ public class MmtfStructureReader implements StructureAdapterInterface, Serializa
 		ChemComp chemComp = new ChemComp();
 		if(singleLetterCode=='X'){
 			chemComp.setOne_letter_code("?");
-
 		}
 		else{
 			chemComp.setOne_letter_code("" + singleLetterCode);
@@ -355,33 +354,6 @@ public class MmtfStructureReader implements StructureAdapterInterface, Serializa
 			structure.setCrystallographicInfo(pci);
 		}
 	}
-
-
-	/**
-	 * Get the type of group (0,1 or 2) depending on whether it is an amino aicd (1), nucleic acid (2) or ligand (0)
-	 * @param currentGroup
-	 * @return The type of group. (0,1 or 2) depending on whether it is an amino aicd (1), nucleic acid (2) or ligand (0)
-	 */
-	private int getGroupTypIndicator(String currentGroupType) {
-		// At the moment - peptide like is a HETATM group (consistent with biojava)
-		if(currentGroupType.toUpperCase().equals("PEPTIDE-LIKE")){
-			return 0;
-		}
-		// Again to correspond with Biojava - but I suspect we really want this to be 1
-		if(currentGroupType.toUpperCase().equals("D-PEPTIDE LINKING")){
-			return 0;
-		}
-		if(currentGroupType.toUpperCase().contains("PEPTIDE")){
-			return 1;
-		}
-		if(currentGroupType.toUpperCase().contains("DNA") || currentGroupType.toUpperCase().contains("RNA")){
-			return 2;
-		}
-		else{
-			return 0;
-		}
-	}
-
 
 	@Override
 	public void setBioAssemblyTrans(int bioAssemblyId, int[] inputChainIndices, double[] inputTransform) {
