@@ -696,6 +696,7 @@ public class StructureTools {
 			}
 			if (newChain == null) {
 				newChain = new ChainImpl();
+				newChain.setId(parentC.getId());
 				newChain.setName(parentC.getName());
 				model.add(newChain);
 			}
