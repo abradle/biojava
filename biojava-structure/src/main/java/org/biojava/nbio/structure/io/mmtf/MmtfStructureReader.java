@@ -205,6 +205,11 @@ public class MmtfStructureReader implements StructureAdapterInterface, Serializa
 		chemComp.setOne_letter_code(String.valueOf(singleLetterCode));
 		chemComp.setType(chemCompType.toUpperCase());
 		ResidueType residueType = ResidueType.getResidueTypeFromString(chemCompType);
+		if(residueType==null) {
+			System.err.println("Null resdiue type for chem comp type: "+chemCompType);
+			System.err.println("Group name: "+groupName+"\nGroup number: "+groupNumber);
+			throw new RuntimeException();
+		}
 		chemComp.setResidueType(residueType);
 		chemComp.setPolymerType(residueType.polymerType);
 		group.setChemComp(chemComp);
