@@ -1642,10 +1642,16 @@ public class SimpleMMcifConsumer implements MMcifConsumer {
 			r.setDatabase(structRef.getDb_name());
 			r.setDbIdCode(structRef.getDb_code());
 		}
-
-
-		int seqbegin = Integer.parseInt(sref.getPdbx_auth_seq_align_beg());
-		int seqend   = Integer.parseInt(sref.getPdbx_auth_seq_align_end());
+		// Catch a number format exception - as for 5DN6
+		int seqbegin;
+		int seqend;
+		try{
+			seqbegin = Integer.parseInt(sref.getPdbx_auth_seq_align_beg());
+			seqend   = Integer.parseInt(sref.getPdbx_auth_seq_align_end());
+		}
+		catch(NumberFormatException e) {
+			return;
+		}
 		Character begin_ins_code = new Character(sref.getPdbx_seq_align_beg_ins_code().charAt(0));
 		Character end_ins_code   = new Character(sref.getPdbx_seq_align_end_ins_code().charAt(0));
 
